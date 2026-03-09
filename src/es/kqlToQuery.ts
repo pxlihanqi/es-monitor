@@ -1,19 +1,28 @@
-import { kqlToElastic } from "kql-to-elastic";
+function normalizeKqlLikeQuery(input: string): string {
+  return input
+    .replace(/\bAND\b/gi, "and")
+    .replace(/\bOR\b/gi, "or")
+    .replace(/\bNOT\b/gi, "not")
+    .trim();
+}
 
 /**
- * 将 KQL 查询字符串转换为 Elasticsearch query DSL
- * @param kql KQL 查询字符串，例如: "status:200 and method:GET"
- * @param indexPattern ES 索引模式，例如: "ngx-log-*"
- * @returns Elasticsearch query DSL object
- * @throws Error 当 KQL 语法错误时抛出异常
+ * Accept a Kibana-like query string and translate it into an ES `query_string` query.
+ * This covers the common cases users expect from the search bar:
+ * `field:value`, quoted phrases, `and/or/not`, parentheses, and wildcards.
  */
-export function kqlToEsQuery(kql: string, indexPattern: string): Record<string, unknown> {
-  try {
-    const queryJson = kqlToElastic(kql);
-    const query = JSON.parse(queryJson);
-    return query;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`KQL syntax error: ${message}`);
+export function kqlToEsQuery(kql: string, _indexPattern: string): Record<string, unknown> {
+  const query = normalizeKqlLikeQuery(kql);
+  if (!query) {
+    return { match_all: {} };
   }
+
+  return {
+    query_string: {
+      query,
+      analyze_wildcard: true,
+      default_operator: "AND",
+      lenient: true
+    }
+  };
 }

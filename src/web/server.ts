@@ -12,14 +12,23 @@ import {
   updateMonitor,
   updateMonitorByConfig
 } from "../config/manageMonitors.js";
+import { buildChartOption } from "../chart/buildOption.js";
 import { loadMonitors } from "../config/loadMonitors.js";
+import { renderChartToImage } from "../chart/renderToImage.js";
+import { queryEs } from "../es/queryEs.js";
+import { transformResponse } from "../metrics/transform.js";
 import type { SchedulerController } from "../runner/scheduler.js";
+import { monitorSchema, type LoadedMonitor } from "../types.js";
 import { getRuntimeLogs, logInfo } from "../utils/logger.js";
 
 interface StartWebServerOptions {
-  monitorsRoot: string;
+  chartMonitorsRoot: string;
+  exceptionMonitorsRoot: string;
   port: number;
-  scheduler?: SchedulerController;
+  schedulers?: {
+    chart?: SchedulerController;
+    exception?: SchedulerController;
+  };
 }
 
 interface MonitorBody {
@@ -28,6 +37,27 @@ interface MonitorBody {
   queryJson?: string;
   chartJson?: string;
   monitorConfig?: unknown;
+}
+
+function parseJsonText(raw: string | undefined, fallback: Record<string, unknown>): Record<string, unknown> {
+  if (!raw || !raw.trim()) {
+    return fallback;
+  }
+  return JSON.parse(raw) as Record<string, unknown>;
+}
+
+function buildPreviewMonitor(body: MonitorBody): LoadedMonitor {
+  const parsed = monitorSchema.safeParse(body.monitorConfig);
+  if (!parsed.success) {
+    throw new HttpError(400, `monitor config validate failed: ${parsed.error.message}`);
+  }
+
+  return {
+    ...parsed.data,
+    monitorDir: process.cwd(),
+    queryBody: parseJsonText(body.queryJson, {}),
+    optionPatch: parseJsonText(body.chartJson, {})
+  };
 }
 
 const WEB_ROOT = path.resolve(process.cwd(), "web");
@@ -113,8 +143,39 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse): Promise<b
   }
 }
 
-function resolveMonitorId(pathname: string): string | null {
-  const prefix = "/api/monitors/";
+type MonitorScope = "chart" | "exception";
+
+function getScopeConfig(
+  scope: MonitorScope,
+  options: StartWebServerOptions
+): { monitorsRoot: string; scheduler?: SchedulerController; apiBase: string } {
+  if (scope === "exception") {
+    return {
+      monitorsRoot: options.exceptionMonitorsRoot,
+      scheduler: options.schedulers?.exception,
+      apiBase: "/api/exception-monitors"
+    };
+  }
+
+  return {
+    monitorsRoot: options.chartMonitorsRoot,
+    scheduler: options.schedulers?.chart,
+    apiBase: "/api/chart-monitors"
+  };
+}
+
+function resolveApiScope(pathname: string): MonitorScope | null {
+  if (pathname === "/api/chart-monitors" || pathname.startsWith("/api/chart-monitors/")) {
+    return "chart";
+  }
+  if (pathname === "/api/exception-monitors" || pathname.startsWith("/api/exception-monitors/")) {
+    return "exception";
+  }
+  return null;
+}
+
+function resolveMonitorId(pathname: string, apiBase: string): string | null {
+  const prefix = `${apiBase}/`;
   if (!pathname.startsWith(prefix)) {
     return null;
   }
@@ -123,9 +184,10 @@ function resolveMonitorId(pathname: string): string | null {
 }
 
 export async function startWebServer(options: StartWebServerOptions): Promise<void> {
-  const { monitorsRoot, port, scheduler } = options;
+  const { chartMonitorsRoot, exceptionMonitorsRoot, port } = options;
 
-  await fs.mkdir(monitorsRoot, { recursive: true });
+  await fs.mkdir(chartMonitorsRoot, { recursive: true });
+  await fs.mkdir(exceptionMonitorsRoot, { recursive: true });
 
   const server = createServer(async (req, res) => {
     try {
@@ -133,7 +195,9 @@ export async function startWebServer(options: StartWebServerOptions): Promise<vo
       const requestUrl = getRequestUrl(req);
       const pathname = decodeURIComponent(requestUrl.pathname);
 
-      if (method === "GET" && pathname === "/api/monitors") {
+      const apiScope = resolveApiScope(pathname);
+      if (apiScope && method === "GET" && pathname === getScopeConfig(apiScope, options).apiBase) {
+        const { monitorsRoot } = getScopeConfig(apiScope, options);
         const list = await listMonitorSummaries(monitorsRoot);
         sendJson(res, 200, { data: list });
         return;
@@ -147,7 +211,8 @@ export async function startWebServer(options: StartWebServerOptions): Promise<vo
         return;
       }
 
-      if (method === "POST" && pathname === "/api/monitors") {
+      if (apiScope && method === "POST" && pathname === getScopeConfig(apiScope, options).apiBase) {
+        const { monitorsRoot } = getScopeConfig(apiScope, options);
         const body = await readBody(req);
         if (!body.id) {
           throw new HttpError(400, "field 'id' is required");
@@ -163,7 +228,8 @@ export async function startWebServer(options: StartWebServerOptions): Promise<vo
         return;
       }
 
-      if (method === "POST" && pathname === "/api/monitors/reload") {
+      if (apiScope && method === "POST" && pathname === `${getScopeConfig(apiScope, options).apiBase}/reload`) {
+        const { monitorsRoot, scheduler } = getScopeConfig(apiScope, options);
         if (!scheduler) {
           throw new HttpError(400, "scheduler is not enabled");
         }
@@ -195,8 +261,22 @@ export async function startWebServer(options: StartWebServerOptions): Promise<vo
         return;
       }
 
-      const monitorId = resolveMonitorId(pathname);
+      if (method === "POST" && pathname === "/api/helpers/chart/preview") {
+        const body = await readBody(req);
+        const monitor = buildPreviewMonitor(body);
+        const response = await queryEs(monitor);
+        const dataset = transformResponse(monitor, response);
+        const option = buildChartOption(monitor, dataset);
+        const image = await renderChartToImage(option, monitor.chart.width, monitor.chart.height);
+        sendJson(res, 200, { data: { dataUrl: `data:image/png;base64,${image.base64}` } });
+        return;
+      }
+
+      const monitorId = apiScope
+        ? resolveMonitorId(pathname, getScopeConfig(apiScope, options).apiBase)
+        : null;
       if (monitorId) {
+        const { monitorsRoot, scheduler } = getScopeConfig(apiScope as MonitorScope, options);
         if (method === "GET") {
           const detail = await getMonitorDetail(monitorsRoot, monitorId);
           sendJson(res, 200, { data: detail });

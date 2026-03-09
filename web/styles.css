@@ -80,6 +80,7 @@ body {
 .actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 button {
@@ -112,6 +113,29 @@ button.ghost {
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid var(--line);
   color: var(--ink);
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background-color 0.14s ease;
+}
+
+.button-link.ghost {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.button-link:hover {
+  transform: translateY(-1px);
 }
 
 button.danger-light {
@@ -387,6 +411,24 @@ textarea:focus {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
+}
+
+.preview-panel {
+  margin-top: 14px;
+  border: 1px solid #dbeafe;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.preview-image {
+  width: 100%;
+  min-height: 220px;
+  max-height: 520px;
+  object-fit: contain;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fafc, #eff6ff);
 }
 
 .runtime-log-panel {

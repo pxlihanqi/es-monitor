@@ -100,6 +100,24 @@ const wecomSchema = z.object({
   webhook: z.string().min(1)
 });
 
+const alertSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    threshold: z.number().nonnegative().optional(),
+    title: z.string().optional(),
+    markdownTemplate: z.string().optional(),
+    consecutiveCount: z.number().int().positive().default(1),
+    cooldownMinutes: z.number().int().nonnegative().default(0)
+  })
+  .superRefine((alert, ctx) => {
+    if (alert.enabled && typeof alert.threshold !== "number") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "alert.threshold is required when alert.enabled is true"
+      });
+    }
+  });
+
 const esSchema = z
   .object({
     node: z.string().min(1),
@@ -134,6 +152,7 @@ const esSchema = z
   });
 
 export const monitorSchema = z.object({
+  kind: z.enum(["chart", "exception"]).default("chart"),
   name: z.string().min(1),
   enabled: z.boolean().default(true),
   schedule: z.string().default("*/5 * * * *"),
@@ -142,6 +161,7 @@ export const monitorSchema = z.object({
   metrics: z.array(metricSchema).min(1),
   groupBy: groupBySchema,
   chart: chartSchema,
+  alert: alertSchema.default({ enabled: false }),
   wecom: wecomSchema
 });
 

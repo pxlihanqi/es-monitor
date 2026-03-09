@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Exception Monitor Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="background-orb orb-a"></div>
+    <div class="background-orb orb-b"></div>
+
+    <main class="page-shell">
+      <header class="topbar reveal">
+        <div>
+          <h1>Exception Monitor Studio</h1>
+          <p>独立维护异常日志告警。按数量阈值触发企业微信通知。</p>
+        </div>
+        <div class="actions">
+          <a class="ghost button-link" href="/">通用监控页</a>
+          <button id="refreshBtn" class="ghost">刷新</button>
+          <button id="reloadBtn" class="ghost">重新加载配置</button>
+          <button id="saveAndReloadBtn" class="primary">保存并重新加载</button>
+          <button id="createBtn" class="primary">新建异常监控</button>
+        </div>
+      </header>
+
+      <section class="workspace reveal delay-1">
+        <aside class="sidebar">
+          <div class="panel-title-row">
+            <h2>异常监控</h2>
+            <span id="countBadge" class="badge">0</span>
+          </div>
+          <ul id="monitorList" class="monitor-list"></ul>
+        </aside>
+
+        <section class="editor-panel">
+          <div class="panel-title-row">
+            <h2 id="editorTitle">未选择监控</h2>
+            <span id="status" class="status idle">Ready</span>
+          </div>
+
+          <div class="mode-title">异常日志配置</div>
+          <div class="monitor-form-grid">
+            <label class="field"><span>监控名称</span><input id="f_name" type="text" /></label>
+            <label class="field"><span>是否启用</span><select id="f_enabled"><option value="true">true</option><option value="false">false</option></select></label>
+            <label class="field"><span>执行周期</span><input id="f_schedule" type="text" placeholder="*/1 * * * *" /></label>
+
+            <label class="field"><span>ES 地址</span><input id="f_es_node" type="text" /></label>
+            <label class="field"><span>ES 用户名</span><input id="f_es_username" type="text" /></label>
+            <label class="field"><span>ES 密码</span><input id="f_es_password" type="password" /></label>
+            <label class="field field-wide"><span>索引名称</span><input id="f_es_index" type="text" /></label>
+
+            <label class="field field-wide"><span>查询条件（类 Kibana 输入框）</span><input id="f_es_kql" type="text" placeholder='level:ERROR and service.keyword:cm-main-api and message:*Exception*' /></label>
+
+            <label class="field"><span>最近时间数值</span><input id="f_time_last_value" type="number" min="1" step="1" placeholder="5" /></label>
+            <label class="field"><span>最近时间单位</span><select id="f_time_last_unit"><option value="m">分钟</option><option value="h">小时</option><option value="d">天</option></select></label>
+            <label class="field"><span>时区</span><input id="f_time_timezone" type="text" value="Asia/Shanghai" readonly /></label>
+
+            <label class="field"><span>是否启用告警</span><select id="f_alert_enabled"><option value="true">true</option><option value="false">false</option></select></label>
+            <label class="field"><span>告警阈值</span><input id="f_alert_threshold" type="number" min="0" step="1" placeholder="100" /></label>
+            <label class="field"><span>告警标题</span><input id="f_alert_title" type="text" placeholder="cm-main-api 异常日志告警" /></label>
+            <label class="field"><span>连续触发次数</span><input id="f_alert_consecutive_count" type="number" min="1" step="1" placeholder="3" /></label>
+            <label class="field"><span>冷却时间（分钟）</span><input id="f_alert_cooldown_minutes" type="number" min="0" step="1" placeholder="30" /></label>
+            <label class="field field-wide">
+              <span>企业微信 Markdown 模板</span>
+              <textarea
+                id="f_alert_markdown_template"
+                placeholder="# {{title}}&#10;> 监控名称: {{name}}&#10;> 当前数量: {{totalCount}}&#10;> 告警阈值: {{threshold}}&#10;> 索引: {{index}}&#10;> 条件: {{query}}&#10;> 时间窗口: {{timeWindow}}"
+              ></textarea>
+            </label>
+
+            <label class="field field-wide"><span>企业微信机器人地址</span><input id="f_wecom_webhook" type="text" /></label>
+          </div>
+
+          <div class="editor-actions split">
+            <div class="left-actions">
+              <button id="previewBtn" type="button" class="ghost">图表预览</button>
+              <button id="syncToYamlBtn" type="button" class="ghost">表单 -> YAML</button>
+            </div>
+          </div>
+
+          <section class="preview-panel">
+            <div class="panel-title-row">
+              <h2>图表预览</h2>
+            </div>
+            <img id="previewImage" class="preview-image" alt="图表预览" />
+          </section>
+
+          <details class="raw-panel" open>
+            <summary>原始监控配置</summary>
+            <div class="raw-grid">
+              <label class="field">
+                <span>监控配置 YAML</span>
+                <textarea id="monitorYaml" spellcheck="false"></textarea>
+              </label>
+              <div class="editor-actions">
+                <button id="saveRawBtn" type="button" class="primary">保存原始文本</button>
+              </div>
+            </div>
+          </details>
+        </section>
+      </section>
+    </main>
+
+    <section id="floatingLogPanel" class="floating-log-panel minimized">
+      <div id="floatingLogHeader" class="floating-log-header">
+        <strong>运行日志</strong>
+        <div class="actions">
+          <button id="toggleLogsBtn" type="button" class="ghost">展开</button>
+          <button id="refreshLogsBtn" type="button" class="ghost">刷新</button>
+        </div>
+      </div>
+      <div id="runtimeLogs" class="runtime-logs"></div>
+    </section>
+
+    <script type="module" src="/exception.js"></script>
+  </body>
+</html>

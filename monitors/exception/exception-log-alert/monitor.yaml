@@ -1,0 +1,37 @@
+kind: exception
+name: exception-log-alert
+enabled: true
+schedule: "*/1 * * * *"
+es:
+  node: http://127.0.0.1:9200
+  username: elastic
+  password: replace_me
+  index: app-log-*
+  fuzzyConditions: []
+  kql: level:ERROR and message:*Exception*
+time:
+  field: "@timestamp"
+  mode: relative
+  last: 5m
+  timezone: Asia/Shanghai
+metrics:
+  - name: error_count
+    type: count
+groupBy:
+  type: none
+  size: 20
+chart:
+  type: bar
+  title: exception-log-alert 统计
+  width: 1200
+  height: 600
+  backgroundColor: "#ffffff"
+  colors:
+    - "#dc2626"
+    - "#f97316"
+alert:
+  enabled: true
+  threshold: 50
+  title: exception-log-alert 异常日志告警
+wecom:
+  webhook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=replace_me

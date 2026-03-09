@@ -1,0 +1,41 @@
+kind: chart
+name: new-monitor
+enabled: false
+schedule: "*/5 * * * *"
+es:
+  node: http://127.0.0.1:9200
+  username: elastic
+  password: replace_me
+  index: demo-*
+  queryFile: ./query.json
+  fuzzyConditions: []
+time:
+  field: "@timestamp"
+  mode: relative
+  last: 30m
+  timezone: Asia/Shanghai
+metrics:
+  - name: total_count
+    type: count
+  - name: avg_latency
+    type: avg
+    field: latency
+groupBy:
+  type: date_histogram
+  field: "@timestamp"
+  interval: 5m
+  size: 20
+chart:
+  type: line
+  title: new-monitor dashboard
+  width: 1200
+  height: 600
+  backgroundColor: "#ffffff"
+  colors:
+    - "#0ea5e9"
+    - "#f97316"
+  optionPatchFile: ./chart.json
+alert:
+  enabled: false
+wecom:
+  webhook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=replace_me

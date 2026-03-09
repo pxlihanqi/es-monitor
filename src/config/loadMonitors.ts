@@ -33,6 +33,7 @@ async function resolveConfigFile(monitorDir: string): Promise<string | null> {
 }
 
 export async function loadMonitors(monitorsRoot: string): Promise<LoadedMonitor[]> {
+  await fs.mkdir(monitorsRoot, { recursive: true });
   const entries = await fs.readdir(monitorsRoot, { withFileTypes: true });
   const monitors: LoadedMonitor[] = [];
 

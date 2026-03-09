@@ -45,22 +45,42 @@ async function main(): Promise<void> {
     if (!Number.isInteger(port) || port <= 0 || port > 65535) {
       throw new Error(`invalid port: ${argv.port}`);
     }
-    const monitors = await loadMonitors(monitorsRoot);
-    const filtered = argv.monitor
-      ? monitors.filter((monitor) => monitor.name === argv.monitor)
-      : monitors;
+    const chartMonitorsRoot = path.resolve(monitorsRoot, "chart");
+    const exceptionMonitorsRoot = path.resolve(monitorsRoot, "exception");
+    const chartMonitors = await loadMonitors(chartMonitorsRoot);
+    const exceptionMonitors = await loadMonitors(exceptionMonitorsRoot);
+    const filteredChart = argv.monitor
+      ? chartMonitors.filter((monitor) => monitor.name === argv.monitor)
+      : chartMonitors;
+    const filteredException = argv.monitor
+      ? exceptionMonitors.filter((monitor) => monitor.name === argv.monitor)
+      : exceptionMonitors;
     const context = {
       dryRun: Boolean(argv["dry-run"])
     };
 
-    if (filtered.length === 0) {
-      logInfo("web mode: no monitors found, scheduler is idle");
-    } else {
-      logInfo(`web mode loaded monitors: ${filtered.map((item) => item.name).join(", ")}`);
-    }
+    logInfo(
+      `web mode loaded chart monitors: ${
+        filteredChart.length > 0 ? filteredChart.map((item) => item.name).join(", ") : "none"
+      }`
+    );
+    logInfo(
+      `web mode loaded exception monitors: ${
+        filteredException.length > 0 ? filteredException.map((item) => item.name).join(", ") : "none"
+      }`
+    );
 
-    const scheduler = startScheduler(filtered, context);
-    await startWebServer({ monitorsRoot, port, scheduler });
+    const chartScheduler = startScheduler(filteredChart, context);
+    const exceptionScheduler = startScheduler(filteredException, context);
+    await startWebServer({
+      chartMonitorsRoot,
+      exceptionMonitorsRoot,
+      port,
+      schedulers: {
+        chart: chartScheduler,
+        exception: exceptionScheduler
+      }
+    });
     return;
   }
 

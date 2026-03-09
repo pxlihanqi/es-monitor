@@ -51,6 +51,11 @@ npm run start:web
   }
 }
 ```
+- ES 支持类 Kibana 输入框查询：`es.kql`
+```txt
+status:500 and service.keyword:nginx*
+message:"timeout error" or level:ERROR
+```
 - 支持在线“重新加载配置”
 - 支持在页面删除定时任务（删除监控目录并取消调度）
 

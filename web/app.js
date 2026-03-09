@@ -2,6 +2,7 @@ const state = {
   monitors: [],
   selectedId: ""
 };
+const API_BASE = "/api/chart-monitors";
 
 const monitorListEl = document.getElementById("monitorList");
 const countBadgeEl = document.getElementById("countBadge");
@@ -21,6 +22,8 @@ const addMetricBtnEl = document.getElementById("addMetricBtn");
 const addChartColorBtnEl = document.getElementById("addChartColorBtn");
 const metricsRowsEl = document.getElementById("metricsRows");
 const chartColorRowsEl = document.getElementById("chartColorRows");
+const previewBtnEl = document.getElementById("previewBtn");
+const previewImageEl = document.getElementById("previewImage");
 const syncFromYamlBtnEl = document.getElementById("syncFromYamlBtn");
 const syncToYamlBtnEl = document.getElementById("syncToYamlBtn");
 const refreshLogsBtnEl = document.getElementById("refreshLogsBtn");
@@ -308,7 +311,7 @@ async function deleteMonitor(monitorId) {
 
   setStatus("loading", `Deleting ${monitorId}`);
   try {
-    await request(`/api/monitors/${encodeURIComponent(monitorId)}`, {
+    await request(`${API_BASE}/${encodeURIComponent(monitorId)}`, {
       method: "DELETE"
     });
 
@@ -331,7 +334,7 @@ async function deleteMonitor(monitorId) {
 async function reloadMonitorConfig() {
   setStatus("loading", "Reloading config");
   try {
-    const result = await request("/api/monitors/reload", {
+    const result = await request(`${API_BASE}/reload`, {
       method: "POST",
       body: JSON.stringify({})
     });
@@ -652,7 +655,7 @@ function collectMonitorConfigFromForm() {
 
 async function loadMonitorList(selectFirst = false) {
   setStatus("loading", "Loading");
-  const result = await request("/api/monitors");
+  const result = await request(API_BASE);
   state.monitors = result.data || [];
 
   if (selectFirst && state.monitors.length > 0) {
@@ -668,7 +671,7 @@ async function loadMonitorDetail(monitorId) {
   setEditorDisabled(true);
 
   try {
-    const result = await request(`/api/monitors/${encodeURIComponent(monitorId)}`);
+    const result = await request(`${API_BASE}/${encodeURIComponent(monitorId)}`);
     const detail = result.data;
 
     state.selectedId = detail.id;
@@ -705,7 +708,7 @@ async function saveRawConfig() {
   setEditorDisabled(true);
 
   try {
-    const result = await request(`/api/monitors/${encodeURIComponent(state.selectedId)}`, {
+    const result = await request(`${API_BASE}/${encodeURIComponent(state.selectedId)}`, {
       method: "PUT",
       body: JSON.stringify({
         monitorYaml: monitorYamlEl.value,
@@ -742,7 +745,7 @@ async function saveFormConfig() {
 
   try {
     const monitorConfig = collectMonitorConfigFromForm();
-    const result = await request(`/api/monitors/${encodeURIComponent(state.selectedId)}/form`, {
+    const result = await request(`${API_BASE}/${encodeURIComponent(state.selectedId)}/form`, {
       method: "PUT",
       body: JSON.stringify({
         monitorConfig,
@@ -784,7 +787,7 @@ async function saveFormAndReload() {
   try {
     // 先保存表单配置
     const monitorConfig = collectMonitorConfigFromForm();
-    const saveResult = await request(`/api/monitors/${encodeURIComponent(state.selectedId)}/form`, {
+    const saveResult = await request(`${API_BASE}/${encodeURIComponent(state.selectedId)}/form`, {
       method: "PUT",
       body: JSON.stringify({
         monitorConfig,
@@ -803,7 +806,7 @@ async function saveFormAndReload() {
     }
 
     // 再重新加载配置
-    const reloadResult = await request("/api/monitors/reload", {
+    const reloadResult = await request(`${API_BASE}/reload`, {
       method: "POST",
       body: JSON.stringify({})
     });
@@ -858,6 +861,26 @@ async function syncYamlFromForm() {
   }
 }
 
+async function previewChart() {
+  setStatus("loading", "生成图表预览中");
+
+  try {
+    const monitorConfig = collectMonitorConfigFromForm();
+    const result = await request("/api/helpers/chart/preview", {
+      method: "POST",
+      body: JSON.stringify({
+        monitorConfig,
+        queryJson: queryJsonEl.value,
+        chartJson: chartJsonEl.value
+      })
+    });
+    previewImageEl.src = result.data.dataUrl;
+    setStatus("ok", "图表预览已更新");
+  } catch (error) {
+    setStatus("error", sanitizeMessage(error));
+  }
+}
+
 async function createMonitor() {
   const raw = window.prompt("请输入新监控 ID（支持中文、字母、数字、._-）：", "new-monitor");
   if (!raw) {
@@ -872,7 +895,7 @@ async function createMonitor() {
   setStatus("loading", `Creating ${id}`);
 
   try {
-    await request("/api/monitors", {
+    await request(API_BASE, {
       method: "POST",
       body: JSON.stringify({ id })
     });
@@ -923,6 +946,7 @@ addChartColorBtnEl.addEventListener("click", () => {
 });
 syncFromYamlBtnEl.addEventListener("click", syncFormFromYaml);
 syncToYamlBtnEl.addEventListener("click", syncYamlFromForm);
+previewBtnEl.addEventListener("click", previewChart);
 refreshLogsBtnEl.addEventListener("click", loadRuntimeLogs);
 formEls.timeMode.addEventListener("change", toggleTimeFields);
 formEls.groupType.addEventListener("change", toggleGroupFields);

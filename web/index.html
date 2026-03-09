@@ -23,6 +23,7 @@
           <p>支持表单编辑和原始 YAML/JSON 编辑，配置自动落盘到独立监控目录。</p>
         </div>
         <div class="actions">
+          <a class="ghost button-link" href="/exception.html">异常日志监控页</a>
           <button id="refreshBtn" class="ghost">刷新</button>
           <button id="saveAndReloadBtn" class="primary">保存并重新加载</button>
           <button id="createBtn" class="primary">新建监控</button>
@@ -46,75 +47,83 @@
 
           <div class="mode-title">表单编辑（monitor.yaml）</div>
           <div class="monitor-form-grid">
-            <label class="field"><span>name</span><input id="f_name" type="text" /></label>
-            <label class="field"><span>enabled</span><select id="f_enabled"><option value="true">true</option><option value="false">false</option></select></label>
-            <label class="field"><span>schedule</span><input id="f_schedule" type="text" placeholder="*/5 * * * *" /></label>
+            <label class="field"><span>监控名称</span><input id="f_name" type="text" /></label>
+            <label class="field"><span>是否启用</span><select id="f_enabled"><option value="true">true</option><option value="false">false</option></select></label>
+            <label class="field"><span>执行周期</span><input id="f_schedule" type="text" placeholder="*/5 * * * *" /></label>
 
-            <label class="field"><span>es.node</span><input id="f_es_node" type="text" /></label>
-            <label class="field"><span>es.username</span><input id="f_es_username" type="text" /></label>
-            <label class="field"><span>es.password</span><input id="f_es_password" type="password" /></label>
-            <label class="field"><span>es.index</span><input id="f_es_index" type="text" /></label>
-            <label class="field field-wide"><span>es.kql（KQL 查询，优先级高于 queryFile 和 fuzzyConditions）</span><input id="f_es_kql" type="text" placeholder='status:200 and method:GET' /></label>
-            <label class="field"><span>es.queryFile</span><input id="f_es_query_file" type="text" placeholder="./query.json" /></label>
-            <label class="field field-wide"><span>es.fuzzyConditions（每行 field:value）</span><textarea id="f_es_fuzzy_conditions" placeholder="message:timeout&#10;service.keyword:nginx"></textarea></label>
+            <label class="field"><span>ES 地址</span><input id="f_es_node" type="text" /></label>
+            <label class="field"><span>ES 用户名</span><input id="f_es_username" type="text" /></label>
+            <label class="field"><span>ES 密码</span><input id="f_es_password" type="password" /></label>
+            <label class="field"><span>索引名称</span><input id="f_es_index" type="text" /></label>
+            <label class="field field-wide"><span>查询条件（类 Kibana 输入框，支持 field:value、引号、and/or/not、*）</span><input id="f_es_kql" type="text" placeholder='status:500 and service.keyword:nginx*' /></label>
+            <label class="field"><span>查询文件</span><input id="f_es_query_file" type="text" placeholder="./query.json" /></label>
+            <label class="field field-wide"><span>模糊查询条件（每行 field:value）</span><textarea id="f_es_fuzzy_conditions" placeholder="message:timeout&#10;service.keyword:nginx"></textarea></label>
 
-            <label class="field"><span>time.field</span><input id="f_time_field" type="text" /></label>
-            <label class="field"><span>time.mode</span><select id="f_time_mode"><option value="relative">relative</option><option value="absolute">absolute</option></select></label>
-            <label class="field"><span>time.lastValue</span><input id="f_time_last_value" type="number" min="1" step="1" placeholder="30" /></label>
-            <label class="field"><span>time.lastUnit</span><select id="f_time_last_unit"><option value="m">分钟</option><option value="h">小时</option><option value="d">天</option></select></label>
-            <label class="field"><span>time.start</span><input id="f_time_start" type="text" placeholder="2026-03-05T00:00:00Z" /></label>
-            <label class="field"><span>time.end</span><input id="f_time_end" type="text" placeholder="2026-03-05T00:30:00Z" /></label>
-            <label class="field"><span>time.timezone（固定北京时间）</span><input id="f_time_timezone" type="text" value="Asia/Shanghai" readonly /></label>
+            <label class="field"><span>时间字段</span><input id="f_time_field" type="text" /></label>
+            <label class="field"><span>时间模式</span><select id="f_time_mode"><option value="relative">relative</option><option value="absolute">absolute</option></select></label>
+            <label class="field"><span>最近时间数值</span><input id="f_time_last_value" type="number" min="1" step="1" placeholder="30" /></label>
+            <label class="field"><span>最近时间单位</span><select id="f_time_last_unit"><option value="m">分钟</option><option value="h">小时</option><option value="d">天</option></select></label>
+            <label class="field"><span>开始时间</span><input id="f_time_start" type="text" placeholder="2026-03-05T00:00:00Z" /></label>
+            <label class="field"><span>结束时间</span><input id="f_time_end" type="text" placeholder="2026-03-05T00:30:00Z" /></label>
+            <label class="field"><span>时区（固定北京时间）</span><input id="f_time_timezone" type="text" value="Asia/Shanghai" readonly /></label>
 
-            <label class="field"><span>groupBy.type</span><select id="f_group_type"><option value="none">none</option><option value="date_histogram">date_histogram</option><option value="terms">terms</option></select></label>
-            <label class="field"><span>groupBy.field（terms可逗号分隔多字段）</span><input id="f_group_field" type="text" placeholder="service.keyword,host.keyword" /></label>
-            <label class="field"><span>groupBy.interval</span><input id="f_group_interval" type="text" placeholder="5m" /></label>
-            <label class="field"><span>groupBy.size</span><input id="f_group_size" type="number" min="1" max="1000" step="1" /></label>
-            <label class="field"><span>groupBy.sort（按第一个metric降序排序）</span><input id="f_group_sort" type="checkbox" /></label>
+            <label class="field"><span>分组类型</span><select id="f_group_type"><option value="none">none</option><option value="date_histogram">date_histogram</option><option value="terms">terms</option></select></label>
+            <label class="field"><span>分组字段（terms 可逗号分隔多字段）</span><input id="f_group_field" type="text" placeholder="service.keyword,host.keyword" /></label>
+            <label class="field"><span>分组间隔</span><input id="f_group_interval" type="text" placeholder="5m" /></label>
+            <label class="field"><span>分组数量</span><input id="f_group_size" type="number" min="1" max="1000" step="1" /></label>
+            <label class="field"><span>按首个指标降序</span><input id="f_group_sort" type="checkbox" /></label>
 
-            <label class="field"><span>chart.type</span><select id="f_chart_type"><option value="line">line</option><option value="bar">bar</option><option value="table">table</option></select></label>
-            <label class="field"><span>chart.title</span><input id="f_chart_title" type="text" /></label>
-            <label class="field"><span>chart.width</span><input id="f_chart_width" type="number" min="100" step="1" /></label>
-            <label class="field"><span>chart.height</span><input id="f_chart_height" type="number" min="100" step="1" /></label>
-            <label class="field"><span>chart.backgroundColor</span><input id="f_chart_bg" type="text" placeholder="#ffffff" /></label>
+            <label class="field"><span>图表类型</span><select id="f_chart_type"><option value="line">line</option><option value="bar">bar</option><option value="table">table</option></select></label>
+            <label class="field"><span>图表标题</span><input id="f_chart_title" type="text" /></label>
+            <label class="field"><span>图表宽度</span><input id="f_chart_width" type="number" min="100" step="1" /></label>
+            <label class="field"><span>图表高度</span><input id="f_chart_height" type="number" min="100" step="1" /></label>
+            <label class="field"><span>背景颜色</span><input id="f_chart_bg" type="text" placeholder="#ffffff" /></label>
             <div class="field">
-              <span>chart.colors（采色）</span>
+              <span>图表颜色（采色）</span>
               <div id="chartColorRows" class="color-rows"></div>
               <button id="addChartColorBtn" type="button" class="ghost">新增颜色</button>
             </div>
-            <label class="field"><span>chart.optionPatchFile</span><input id="f_chart_patch_file" type="text" placeholder="./chart.json" /></label>
+            <label class="field"><span>图表样式文件</span><input id="f_chart_patch_file" type="text" placeholder="./chart.json" /></label>
 
-            <label class="field field-wide"><span>wecom.webhook</span><input id="f_wecom_webhook" type="text" /></label>
+            <label class="field field-wide"><span>企业微信机器人地址</span><input id="f_wecom_webhook" type="text" /></label>
           </div>
 
           <div class="metrics-title-row">
-            <div class="mode-title">metrics</div>
+          <div class="mode-title">统计指标</div>
             <button id="addMetricBtn" type="button" class="ghost">新增 metric</button>
           </div>
           <div id="metricsRows" class="metrics-rows"></div>
 
           <div class="editor-actions split">
             <div class="left-actions">
+              <button id="previewBtn" type="button" class="ghost">图表预览</button>
               <button id="syncFromYamlBtn" type="button" class="ghost">YAML -> 表单</button>
               <button id="syncToYamlBtn" type="button" class="ghost">表单 -> YAML</button>
             </div>
           </div>
 
+          <section class="preview-panel">
+            <div class="panel-title-row">
+              <h2>图表预览</h2>
+            </div>
+            <img id="previewImage" class="preview-image" alt="图表预览" />
+          </section>
+
           <details class="raw-panel" open>
             <summary>原始文本编辑（高级）</summary>
             <div class="raw-grid">
               <label class="field">
-                <span>monitor.yaml</span>
+                <span>监控配置 YAML</span>
                 <textarea id="monitorYaml" spellcheck="false"></textarea>
               </label>
 
               <label class="field">
-                <span>query.json</span>
+                <span>查询配置 JSON</span>
                 <textarea id="queryJson" spellcheck="false"></textarea>
               </label>
 
               <label class="field">
-                <span>chart.json</span>
+                <span>图表样式 JSON</span>
                 <textarea id="chartJson" spellcheck="false"></textarea>
               </label>
 

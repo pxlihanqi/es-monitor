@@ -9,6 +9,7 @@ const SAFE_ID = /^(?=.{1,64}$)[\p{L}\p{N}][\p{L}\p{N}._-]*$/u;
 
 export interface MonitorSummary {
   id: string;
+  kind: "chart" | "exception";
   name: string;
   enabled: boolean;
   schedule: string;
@@ -95,6 +96,7 @@ function prettyJson(text: string): string {
 
 function buildDefaultYaml(monitorId: string): string {
   const payload = {
+    kind: "chart",
     name: monitorId,
     enabled: false,
     schedule: "*/5 * * * *",
@@ -129,6 +131,9 @@ function buildDefaultYaml(monitorId: string): string {
       backgroundColor: "#ffffff",
       colors: ["#0ea5e9", "#f97316"],
       optionPatchFile: "./chart.json"
+    },
+    alert: {
+      enabled: false
     },
     wecom: {
       webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=replace_me"
@@ -241,6 +246,7 @@ export async function listMonitorSummaries(monitorsRoot: string): Promise<Monito
 
       summaries.push({
         id: monitorId,
+        kind: parsed.kind,
         name: parsed.name,
         enabled: parsed.enabled,
         schedule: parsed.schedule,
@@ -249,6 +255,7 @@ export async function listMonitorSummaries(monitorsRoot: string): Promise<Monito
     } catch (error) {
       summaries.push({
         id: monitorId,
+        kind: "chart",
         name: monitorId,
         enabled: false,
         schedule: "-",
